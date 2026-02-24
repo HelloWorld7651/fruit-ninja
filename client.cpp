@@ -10,6 +10,7 @@
 #include "NetworkManager.h"
 #include "WorldManager.h"
 #include "utility.h"
+#include "Fruit.h"
 
 #include "game.h"
 #include "client.h"
@@ -81,20 +82,30 @@ int Client::eventHandler(const df::Event *p_e) {
 
   return Object::eventHandler(p_e);
 }
-
 int Client::handleData(const df::EventNetwork *p_en) {
-  int msg_size = p_en->getBytes();
-  char *buff = (char *) malloc(msg_size);
-  if (!buff) return -1;
-  
-  memcpy(buff, p_en->getMessage(), msg_size);
-  MessageType type;
-  memcpy(&type, buff + sizeof(int), sizeof(MessageType));
+  // We can safely read the 'type' by checking the generic struct first
+  const SwordPosMsg *p_msg = (const SwordPosMsg *) p_en->getMessage();
 
-  if (type == MessageType::EXIT) {
-    GM.setGameOver();
+  if (p_msg->type == MessageType::SWORD_POS) {
+    df::Vector pos(p_msg->x, p_msg->y);
+    df::ObjectList swords = WM.objectsOfType(SWORD_STRING);
+    if (swords.getCount() > 0) {
+      swords[0]->setPosition(pos);
+    }
+  }
+  else if (p_msg->type == MessageType::FRUIT_SPAWN) {
+    // Cast it to the Fruit message
+    const FruitSpawnMsg *f_msg = (const FruitSpawnMsg *) p_en->getMessage();
+    
+    // Create a new Fruit on the client side
+    Fruit *p_f = new Fruit();
+    
+    // Override its position and velocity to match the Server exactly
+    p_f->setPosition(df::Vector(f_msg->x, f_msg->y));
+    p_f->setVelocity(df::Vector(f_msg->vx, f_msg->vy));
+    
+    LM.writeLog("Client: Received FRUIT_SPAWN! Created fruit at %f, %f", f_msg->x, f_msg->y);
   }
 
-  free(buff);
   return 1;
 }

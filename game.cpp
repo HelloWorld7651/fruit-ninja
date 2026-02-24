@@ -10,6 +10,7 @@
 #include "utility.h"
 #include <sys/types.h>  
 #include <unistd.h>     
+#include "Grocer.h"
 
 // Game includes.
 #include "game.h"
@@ -45,12 +46,13 @@ int main(int argc, char *argv[]) {
     return 0;
   }
 
-  if (is_server) {
+ if (is_server) {
     new Server;
-    new Sword; // Server gets a sword
+    new Sword; 
+    new Grocer;
   } else {
     new Client(argv[1]);
-    new Sword; // Client gets a sword
+    new Sword; 
   }
 
   // Setup logging.

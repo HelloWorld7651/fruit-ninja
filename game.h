@@ -10,19 +10,29 @@
 
 const float VERSION=1.1f;
 
-// Types of Messages between Client and Server.
 enum class MessageType {
   UNDEFINED = -1,
   EXIT,
-  SWORD_POS, 
+  SWORD_POS,
+  FRUIT_SPAWN, // <-- New message type
 };
 
-// A strict structure for sending sword data
+// Struct for Sword
 struct SwordPosMsg {
   int msg_size;
   MessageType type;
   float x;
   float y;
+};
+
+// Struct for telling the Client to spawn a Fruit
+struct FruitSpawnMsg {
+  int msg_size;
+  MessageType type;
+  float x;
+  float y;
+  float vx;
+  float vy;
 };
 
 // Fruit settings.

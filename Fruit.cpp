@@ -8,6 +8,8 @@
 #include "EventView.h"
 #include "GameManager.h"
 #include "LogManager.h"
+#include "NetworkManager.h"
+#include "game.h"
 #include "WorldManager.h"
 
 // Game includes.
@@ -26,6 +28,22 @@ Fruit::Fruit(std::string name) {
                 name.c_str());
   m_first_out = true; // To ignore first out of bounds (when spawning).
   setSolidness(df::SOFT);
+  // If we are the Server, tell the Client to spawn this exact same fruit
+  if (NM.isServer()) {
+    FruitSpawnMsg msg;
+    msg.msg_size = sizeof(FruitSpawnMsg);
+    msg.type = MessageType::FRUIT_SPAWN;
+    
+    // Grab the starting position and velocity of this fruit
+    msg.x = getPosition().getX();
+    msg.y = getPosition().getY();
+    msg.vx = getVelocity().getX();
+    msg.vy = getVelocity().getY();
+    
+    // Send it to the client
+    NM.send(&msg, msg.msg_size);
+    LM.writeLog("Server: Sent FRUIT_SPAWN at %f, %f", msg.x, msg.y);
+  }
 }
 
 // Handle event.
