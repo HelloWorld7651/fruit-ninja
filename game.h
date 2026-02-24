@@ -17,6 +17,14 @@ enum class MessageType {
   SWORD_POS, 
 };
 
+// A strict structure for sending sword data
+struct SwordPosMsg {
+  int msg_size;
+  MessageType type;
+  float x;
+  float y;
+};
+
 // Fruit settings.
 const int NUM_FRUITS = 5;
 const std::string FRUIT[NUM_FRUITS] = {

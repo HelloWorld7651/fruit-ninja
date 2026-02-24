@@ -59,10 +59,10 @@ int main(int argc, char *argv[]) {
   LM.writeLog("Fruit Ninja (v%.1f)", VERSION);
 
   // Dragonfly splash screen.
-  df::splash();
+  //df::splash();
 
   // Fruit Ninja splash screen.
-  splash();
+  //splash();
 
   GM.run();
 
