@@ -2,13 +2,17 @@
 // server.cpp
 //
 
+// System includes.
 #include <string.h>
+
+// Engine includes.
 #include "LogManager.h"
 #include "GameManager.h"
 #include "NetworkManager.h"
 #include "WorldManager.h"
 #include "utility.h"
 
+// Game includes.
 #include "game.h"
 #include "server.h"
 #include "Sword.h" 
@@ -33,7 +37,8 @@ int Server::eventHandler(const df::Event *p_e) {
       GM.setGameOver();
       return 1;
     }
-    else if (p_ne->getLabel() == df::NetworkEventLabel::DATA) {
+    // IF IT IS NOT ACCEPT OR CLOSE, IT IS INCOMING DATA
+    else {
       return handleData(p_ne);
     }
   }
@@ -42,18 +47,18 @@ int Server::eventHandler(const df::Event *p_e) {
 }
 
 int Server::handleData(const df::EventNetwork *p_en) {
-  // Cast the raw incoming bytes directly into our struct
-  const SwordPosMsg *p_msg = (const SwordPosMsg *) p_en->getMessage();
+  // Read just the base header to figure out what type of message this is safely
+  const BaseMsg *p_base = (const BaseMsg *) p_en->getMessage();
 
-  if (p_msg->type == MessageType::SWORD_POS) {
+  if (p_base->type == MessageType::SWORD_POS) {
+    // We know it's a sword pos, safe to cast to the full struct
+    const SwordPosMsg *p_msg = (const SwordPosMsg *) p_en->getMessage();
     df::Vector pos(p_msg->x, p_msg->y);
     
     // Update sword position
     df::ObjectList swords = WM.objectsOfType(SWORD_STRING);
     if (swords.getCount() > 0) {
       swords[0]->setPosition(pos);
-      // Log exactly what the server successfully read and applied:
-      LM.writeLog("Server: Sword safely moved to %f, %f", p_msg->x, p_msg->y);
     }
   }
 

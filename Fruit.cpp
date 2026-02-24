@@ -2,6 +2,9 @@
 // Fruit.cpp
 //
 
+// System includes
+#include <string.h>
+
 // Engine includes.
 #include "EventCollision.h"
 #include "EventOut.h"
@@ -9,7 +12,6 @@
 #include "GameManager.h"
 #include "LogManager.h"
 #include "NetworkManager.h"
-#include "game.h"
 #include "WorldManager.h"
 
 // Game includes.
@@ -28,22 +30,9 @@ Fruit::Fruit(std::string name) {
                 name.c_str());
   m_first_out = true; // To ignore first out of bounds (when spawning).
   setSolidness(df::SOFT);
-  // If we are the Server, tell the Client to spawn this exact same fruit
-  if (NM.isServer()) {
-    FruitSpawnMsg msg;
-    msg.msg_size = sizeof(FruitSpawnMsg);
-    msg.type = MessageType::FRUIT_SPAWN;
-    
-    // Grab the starting position and velocity of this fruit
-    msg.x = getPosition().getX();
-    msg.y = getPosition().getY();
-    msg.vx = getVelocity().getX();
-    msg.vy = getVelocity().getY();
-    
-    // Send it to the client
-    NM.send(&msg, msg.msg_size);
-    LM.writeLog("Server: Sent FRUIT_SPAWN at %f, %f", msg.x, msg.y);
-  }
+  
+  // Notice: Network sending has been REMOVED from here, 
+  // because the fruit's position and velocity are 0,0 right now!
 }
 
 // Handle event.
@@ -167,4 +156,22 @@ void Fruit::start(float speed) {
   velocity.normalize();
   setDirection(velocity);
   setSpeed(speed);
+
+  // NEW: Send the network message AFTER position and velocity are set!
+  if (NM.isServer()) {
+    FruitSpawnMsg msg;
+    msg.msg_size = sizeof(FruitSpawnMsg);
+    msg.type = MessageType::FRUIT_SPAWN;
+    
+    msg.x = getPosition().getX();
+    msg.y = getPosition().getY();
+    msg.vx = getVelocity().getX();
+    msg.vy = getVelocity().getY();
+    
+    // Copy the name of the fruit (e.g., "apple") into the struct safely
+    strcpy(msg.fruit_name, getType().c_str()); 
+    
+    NM.send(&msg, msg.msg_size);
+    LM.writeLog("Server: Sent FRUIT_SPAWN (%s) at %f, %f", msg.fruit_name, msg.x, msg.y);
+  }
 }

@@ -14,7 +14,13 @@ enum class MessageType {
   UNDEFINED = -1,
   EXIT,
   SWORD_POS,
-  FRUIT_SPAWN, // <-- New message type
+  FRUIT_SPAWN,
+};
+
+// NEW: Base message for safe type checking
+struct BaseMsg {
+  int msg_size;
+  MessageType type;
 };
 
 // Struct for Sword
@@ -25,7 +31,7 @@ struct SwordPosMsg {
   float y;
 };
 
-// Struct for telling the Client to spawn a Fruit
+// Struct for Fruit
 struct FruitSpawnMsg {
   int msg_size;
   MessageType type;
@@ -33,6 +39,7 @@ struct FruitSpawnMsg {
   float y;
   float vx;
   float vy;
+  char fruit_name[20]; // Tells the client which sprite to load
 };
 
 // Fruit settings.
