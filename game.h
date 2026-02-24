@@ -10,6 +10,13 @@
 
 const float VERSION=1.1f;
 
+// Types of Messages between Client and Server.
+enum class MessageType {
+  UNDEFINED = -1,
+  EXIT,
+  SWORD_POS, 
+};
+
 // Fruit settings.
 const int NUM_FRUITS = 5;
 const std::string FRUIT[NUM_FRUITS] = {

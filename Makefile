@@ -34,9 +34,11 @@ INCDIR= -I../SFML-3.0.2/include -I$(DF)/include
 ######
 
 CC= g++
-CFLAGS= -std=c++17 -DNO_NETWORK
+CFLAGS= -std=c++17
 
 GAMESRC= \
+	Client.cpp \
+	Server.cpp \
 	Fruit.cpp \
 	GameOver.cpp \
 	Grocer.cpp \
