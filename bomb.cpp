@@ -255,6 +255,10 @@ void Bomb::start(float speed) {
     msg.vx       = getVelocity().getX();
     msg.vy       = getVelocity().getY();
     strcpy(msg.bomb_name, getAnimation().getSprite()->getLabel().c_str());
+    LM.writeLog("Sending bomb spawn: (%f,%f) vel (%f,%f) %s",
+             getPosition().getX(), getPosition().getY(),
+             getVelocity().getX(), getVelocity().getY(),
+             getType().c_str());
     NM.send(&msg, msg.msg_size);  
   }
 }

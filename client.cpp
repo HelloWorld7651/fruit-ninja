@@ -69,6 +69,7 @@ int Client::handleData(const df::EventNetwork *p_en) {
     }
   }
   else if (p_base->type == MessageType::FRUIT_SPAWN) {
+    LM.writeLog("Recieved Client");
     const FruitSpawnMsg *f_msg = (const FruitSpawnMsg *) p_en->getMessage();
     Fruit *p_f = new Fruit(std::string(f_msg->fruit_name));
     p_f->setPosition(df::Vector(f_msg->x, f_msg->y));
