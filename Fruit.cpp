@@ -157,8 +157,8 @@ void Fruit::start(float speed) {
   setDirection(velocity);
   setSpeed(speed);
 
-  // NEW: Send the network message ONLY if a client is connected
-  if (NM.isServer() && NM.getNumConnections() > 0) {
+  //if server send message
+  if (NM.isServer()) {
     FruitSpawnMsg msg;
     msg.msg_size = sizeof(FruitSpawnMsg);
     msg.type = MessageType::FRUIT_SPAWN;
@@ -166,10 +166,7 @@ void Fruit::start(float speed) {
     msg.y = getPosition().getY();
     msg.vx = getVelocity().getX();
     msg.vy = getVelocity().getY();
-    
-    // Copy the name of the fruit (e.g., "apple") into the struct safely
-    strcpy(msg.fruit_name, getType().c_str()); 
-    
+    strcpy(msg.fruit_name, getType().c_str());
     NM.send(&msg, msg.msg_size);
   }
 }

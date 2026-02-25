@@ -246,18 +246,15 @@ void Bomb::start(float speed) {
   else{
     setSpeed(speed);
   }
-  if (NM.isServer() && NM.getNumConnections() > 0) {
+  if (NM.isServer()) {
     BombSpawnMsg msg;
     msg.msg_size = sizeof(BombSpawnMsg);
-    msg.type = MessageType::BOMB_SPAWN;
-    msg.x = getPosition().getX();
-    msg.y = getPosition().getY();
-    msg.vx = getVelocity().getX();
-    msg.vy = getVelocity().getY();
-    
-    // Grab the exact sprite so the client can duplicate it
-    strcpy(msg.bomb_name, getAnimation().getSprite()->getLabel().c_str()); 
-    
-    NM.send(&msg, msg.msg_size);
+    msg.type     = MessageType::BOMB_SPAWN;
+    msg.x        = getPosition().getX();
+    msg.y        = getPosition().getY();
+    msg.vx       = getVelocity().getX();
+    msg.vy       = getVelocity().getY();
+    strcpy(msg.bomb_name, getAnimation().getSprite()->getLabel().c_str());
+    NM.send(&msg, msg.msg_size);  
   }
 }
