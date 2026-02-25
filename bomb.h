@@ -26,6 +26,8 @@ class Bomb: public df::Object{
     public:
         //constructor
         Bomb();
+        //new client constructor
+        Bomb(std::string sprite_name);
         // Destructor - if inside the game world, create explosion.
         ~Bomb();
 

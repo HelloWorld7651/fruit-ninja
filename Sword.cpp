@@ -14,6 +14,7 @@
 #include "NetworkManager.h" // ADDED FOR MULTIPLAYER
 #include "ResourceManager.h"
 #include "WorldManager.h"
+#include "game.h"
 
 // Game includes.
 #include "Fruit.h"

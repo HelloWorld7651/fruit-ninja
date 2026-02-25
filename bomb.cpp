@@ -15,6 +15,8 @@
 #include "GameManager.h"
 #include "LogManager.h"
 #include "WorldManager.h"
+#include <string.h>
+#include "NetworkManager.h"
 
 // Game includes.
 #include "game.h"
@@ -91,7 +93,16 @@ Bomb::Bomb() {
     first_spawn = true; // To ignore first out of bounds (when spawning).
     setSolidness(df::SOFT);
 }
+Bomb::Bomb(std::string sprite_name) {
+    setType("bomb");
+    setSprite(sprite_name);
+    
+    if (getAnimation().getSprite() == NULL)
+        LM.writeLog("BOMB::BOMB(string): Error! Unable to find sprite: %s", sprite_name.c_str());
 
+    first_spawn = true;
+    setSolidness(df::SOFT);
+}
 // Handle event.
 int Bomb::eventHandler(const df::Event *p_e) {
 
@@ -234,5 +245,19 @@ void Bomb::start(float speed) {
   }
   else{
     setSpeed(speed);
+  }
+  if (NM.isServer() && NM.getNumConnections() > 0) {
+    BombSpawnMsg msg;
+    msg.msg_size = sizeof(BombSpawnMsg);
+    msg.type = MessageType::BOMB_SPAWN;
+    msg.x = getPosition().getX();
+    msg.y = getPosition().getY();
+    msg.vx = getVelocity().getX();
+    msg.vy = getVelocity().getY();
+    
+    // Grab the exact sprite so the client can duplicate it
+    strcpy(msg.bomb_name, getAnimation().getSprite()->getLabel().c_str()); 
+    
+    NM.send(&msg, msg.msg_size);
   }
 }
