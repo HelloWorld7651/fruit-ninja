@@ -90,16 +90,24 @@ int Sword::step(const df::EventStep *p_e) {
   return 1;
 }
 
-// Handle mouse event.
 int Sword::mouse(const df::EventMouse *p_e) {
-  // SERVER OVERRIDE: Prevent the server player from moving the sword locally
+  // If running on the server, ignore mouse input entirely.
   if (NM.isServer()) {
     return 0;
   }
 
-  // If "move", change position to mouse position.
-  if (p_e -> getMouseAction() == df::MOVED) {
-    setPosition(p_e -> getMousePosition());
+  // When the user moves the mouse, send the new position to the server
+  // instead of moving the sword locally. The authoritative server will
+  // update the sword position and broadcast it back to all clients.
+  if (p_e->getMouseAction() == df::MOVED) {
+    MousePosMsg msg;
+    msg.msg_size = sizeof(MousePosMsg);
+    msg.type = MessageType::MOUSE_POS;
+    msg.x = p_e->getMousePosition().getX();
+    msg.y = p_e->getMousePosition().getY();
+    
+    // Send input to the server
+    NM.send(&msg, msg.msg_size);
     return 1;
   }
   return 0;

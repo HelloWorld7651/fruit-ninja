@@ -13,17 +13,27 @@ const float VERSION=1.1f;
 enum class MessageType {
   UNDEFINED = -1,
   EXIT,
-  SWORD_POS,
-  FRUIT_SPAWN,
+  MOUSE_POS,   // Client tells Server where the mouse is
+  SWORD_POS,   // Server tells Clients where the official Sword is
+  FRUIT_SPAWN, // Server tells Clients to spawn a fruit
+  BOMB_SPAWN,  // Server tells Clients to spawn a bomb
 };
 
-// NEW: Base message for safe type checking
+// Base message for safe type checking
 struct BaseMsg {
   int msg_size;
   MessageType type;
 };
 
-// Struct for Sword
+// Struct for mouse input (client to server).
+struct MousePosMsg {
+  int msg_size;
+  MessageType type;
+  float x;
+  float y;
+};
+
+// Struct for Sword broadcast (server to client)
 struct SwordPosMsg {
   int msg_size;
   MessageType type;
@@ -40,6 +50,17 @@ struct FruitSpawnMsg {
   float vx;
   float vy;
   char fruit_name[20]; // Tells the client which sprite to load
+};
+
+// Struct for Bomb
+struct BombSpawnMsg {
+  int msg_size;
+  MessageType type;
+  float x;
+  float y;
+  float vx;
+  float vy;
+  char bomb_name[20]; // Tells the client which bomb sprite to load
 };
 
 // Fruit settings.

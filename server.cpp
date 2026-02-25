@@ -37,8 +37,8 @@ int Server::eventHandler(const df::Event *p_e) {
       GM.setGameOver();
       return 1;
     }
-    // IF IT IS NOT ACCEPT OR CLOSE, IT IS INCOMING DATA
     else {
+      // Incoming Data
       return handleData(p_ne);
     }
   }
@@ -48,18 +48,30 @@ int Server::eventHandler(const df::Event *p_e) {
 
 int Server::handleData(const df::EventNetwork *p_en) {
   // Read just the base header to figure out what type of message this is safely
-  const BaseMsg *p_base = (const BaseMsg *) p_en->getMessage();
+  const BaseMsg *p_base = (const BaseMsg *)p_en->getMessage();
 
-  if (p_base->type == MessageType::SWORD_POS) {
-    // We know it's a sword pos, safe to cast to the full struct
-    const SwordPosMsg *p_msg = (const SwordPosMsg *) p_en->getMessage();
+  // Identify which client sent this (needed for supporting multiple swords later)
+  int socket_index = p_en->getSocket();
+
+  // Handle incoming mouse position from client
+  if (p_base->type == MessageType::MOUSE_POS) {
+    const MousePosMsg *p_msg = (const MousePosMsg *)p_en->getMessage();
     df::Vector pos(p_msg->x, p_msg->y);
     
-    // Update sword position
+    // Update the authoritative sword's position
     df::ObjectList swords = WM.objectsOfType(SWORD_STRING);
     if (swords.getCount() > 0) {
       swords[0]->setPosition(pos);
     }
+    
+    // Broadcast updated sword position back to all clients
+    SwordPosMsg out;
+    out.msg_size = sizeof(SwordPosMsg);
+    out.type = MessageType::SWORD_POS;
+    out.x = pos.getX();
+    out.y = pos.getY();
+    
+    NM.send(&out, out.msg_size);
   }
 
   return 1;

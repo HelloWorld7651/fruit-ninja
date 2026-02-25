@@ -157,12 +157,11 @@ void Fruit::start(float speed) {
   setDirection(velocity);
   setSpeed(speed);
 
-  // NEW: Send the network message AFTER position and velocity are set!
-  if (NM.isServer()) {
+  // NEW: Send the network message ONLY if a client is connected
+  if (NM.isServer() && NM.getNumConnections() > 0) {
     FruitSpawnMsg msg;
     msg.msg_size = sizeof(FruitSpawnMsg);
     msg.type = MessageType::FRUIT_SPAWN;
-    
     msg.x = getPosition().getX();
     msg.y = getPosition().getY();
     msg.vx = getVelocity().getX();
@@ -172,6 +171,5 @@ void Fruit::start(float speed) {
     strcpy(msg.fruit_name, getType().c_str()); 
     
     NM.send(&msg, msg.msg_size);
-    LM.writeLog("Server: Sent FRUIT_SPAWN (%s) at %f, %f", msg.fruit_name, msg.x, msg.y);
   }
 }
