@@ -56,6 +56,7 @@ int Client::eventHandler(const df::Event *p_e) {
 }
 
 int Client::handleData(const df::EventNetwork *p_en) {
+    LM.writeLog("Client: HandleData Called");
       // Get a pointer to the raw bytes
     const char *data = (const char *)p_en->getMessage();
 
