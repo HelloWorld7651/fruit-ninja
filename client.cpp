@@ -56,56 +56,49 @@ int Client::eventHandler(const df::Event *p_e) {
 }
 
 int Client::handleData(const df::EventNetwork *p_en) {
-    LM.writeLog("Client: HandleData Called");
-      // Get a pointer to the raw bytes
-    const char *data = (const char *)p_en->getMessage();
+  LM.writeLog("Client: HandleData Called");
 
-    // Read the first 4 bytes to get the total length (not used here)
-    int msgLen;
-    memcpy(&msgLen, data, sizeof(int));
+  // Get the raw byte buffer and total bytes received in this network event
+  char *buffer = (char *)p_en->getMessage();
+  int total_bytes = p_en->getBytes(); // Change to getSize() if your compiler complains
+  int bytes_processed = 0;
 
-    // Read the next 4 bytes for the message type
-    int msgType;
-    memcpy(&msgType, data + sizeof(int), sizeof(int));
+  // Loop through the buffer until we've processed every coalesced message
+  while (bytes_processed < total_bytes) {
+    // Cast the current position in the buffer to a BaseMsg
+    const BaseMsg *p_base = (const BaseMsg *)(buffer + bytes_processed);
 
-  if (msgType == static_cast<int>(MessageType::SWORD_POS)) {
-    // Cast to SwordPosMsg for full payload
-    const SwordPosMsg *p_msg = (const SwordPosMsg *) p_en->getMessage();
-    df::Vector pos(p_msg->x, p_msg->y);
-    df::ObjectList swords = WM.objectsOfType(SWORD_STRING);
-    if (swords.getCount() > 0) {
-      swords[0]->setPosition(pos);
-    }
-  }
-  if (msgType == static_cast<int>(MessageType::FRUIT_SPAWN)) {
-    int offset = sizeof(int) + sizeof(int); // skip length and type
-
-    // Extract x, y, vx, vy
-    float x, y, vx, vy;
-    memcpy(&x, data + offset, sizeof(float)); offset += sizeof(float);
-    memcpy(&y, data + offset, sizeof(float)); offset += sizeof(float);
-    memcpy(&vx, data + offset, sizeof(float)); offset += sizeof(float);
-    memcpy(&vy, data + offset, sizeof(float)); offset += sizeof(float);
-
-    // Extract the fruit name (20 bytes, ensure null-termination)
-    char nameBuf[21] = {0};
-    memcpy(nameBuf, data + offset, 20);
-
-    // Create and initialise the fruit locally
-    Fruit *p_f = new Fruit(std::string(nameBuf));
-    p_f->setPosition(df::Vector(x, y));
-    p_f->setVelocity(df::Vector(vx, vy));
-
-    // Optionally log to confirm receipt
-    LM.writeLog("Received fruit spawn: (%f,%f) velocity (%f,%f) %s",
-      x, y, vx, vy, nameBuf);
+    // Safety net in case of a corrupted message size
+    if (p_base->msg_size <= 0) {
+      LM.writeLog("Client: Received invalid message size! Breaking loop.");
+      break; 
     }
 
-  else if (msgType == static_cast<int>( MessageType::BOMB_SPAWN)) {
-    const BombSpawnMsg *b_msg = (const BombSpawnMsg *) p_en->getMessage();
-    Bomb *p_b = new Bomb(std::string(b_msg->bomb_name));
-    p_b->setPosition(df::Vector(b_msg->x, b_msg->y));
-    p_b->setVelocity(df::Vector(b_msg->vx, b_msg->vy));
+    if (p_base->type == MessageType::SWORD_POS) {
+      const SwordPosMsg *p_msg = (const SwordPosMsg *)p_base;
+      df::Vector pos(p_msg->x, p_msg->y);
+      df::ObjectList swords = WM.objectsOfType(SWORD_STRING);
+      if (swords.getCount() > 0) {
+        swords[0]->setPosition(pos);
+      }
+    }
+    else if (p_base->type == MessageType::FRUIT_SPAWN) {
+      LM.writeLog("Client: Received FRUIT_SPAWN!");
+      const FruitSpawnMsg *f_msg = (const FruitSpawnMsg *)p_base;
+      Fruit *p_f = new Fruit(std::string(f_msg->fruit_name));
+      p_f->setPosition(df::Vector(f_msg->x, f_msg->y));
+      p_f->setVelocity(df::Vector(f_msg->vx, f_msg->vy));
+    }
+    else if (p_base->type == MessageType::BOMB_SPAWN) {
+      LM.writeLog("Client: Received BOMB_SPAWN!");
+      const BombSpawnMsg *b_msg = (const BombSpawnMsg *)p_base;
+      Bomb *p_b = new Bomb(std::string(b_msg->bomb_name));
+      p_b->setPosition(df::Vector(b_msg->x, b_msg->y));
+      p_b->setVelocity(df::Vector(b_msg->vx, b_msg->vy));
+    }
+
+    // Advance our pointer by the size of the message we just read!
+    bytes_processed += p_base->msg_size;
   }
 
   return 1;

@@ -20,6 +20,7 @@
 #include "Points.h"
 #include "Sword.h"
 #include "util.h"
+#include "server.h" // ADDED THIS
 
 // Constructor - supply name of Fruit (matches Sprite).
 Fruit::Fruit(std::string name) {
@@ -30,9 +31,6 @@ Fruit::Fruit(std::string name) {
                 name.c_str());
   m_first_out = true; // To ignore first out of bounds (when spawning).
   setSolidness(df::SOFT);
-  
-  // Notice: Network sending has been REMOVED from here, 
-  // because the fruit's position and velocity are 0,0 right now!
 }
 
 // Handle event.
@@ -157,50 +155,26 @@ void Fruit::start(float speed) {
   setDirection(velocity);
   setSpeed(speed);
 
-  //if server send message
-  // Only the authoritative server sends spawn messages.
-    if (NM.isServer() && NM.getNumConnections()>0) {
-        // Define a fixed-size buffer:
-        //  4 bytes for total length (int)
-        //  4 bytes for message type (int)
-        //  4 floats for x, y, vx, vy (16 bytes)
-        //  20 bytes for the fruit name (padded/truncated)
-        const int NAME_LEN = 20;
-        const int MSG_SIZE = sizeof(int) + sizeof(int) + sizeof(float)*4 + NAME_LEN;
-        char buffer[MSG_SIZE];
-        int offset = 0;
+  // if server send message
+  if (NM.isServer()) {
+    FruitSpawnMsg msg;
+    msg.msg_size = sizeof(FruitSpawnMsg);
+    msg.type = MessageType::FRUIT_SPAWN;
+    msg.x = getPosition().getX();
+    msg.y = getPosition().getY();
+    msg.vx = getVelocity().getX();
+    msg.vy = getVelocity().getY();
+    strcpy(msg.fruit_name, getType().c_str());
 
-        // Write total length
-        memcpy(buffer + offset, &MSG_SIZE, sizeof(int));
-        offset += sizeof(int);
-
-        // Write message type as an int (3 for FRUIT_SPAWN, or cast MessageType)
-        int typeVal = static_cast<int>(MessageType::FRUIT_SPAWN);
-        memcpy(buffer + offset, &typeVal, sizeof(int));
-        offset += sizeof(int);
-
-        // Write x, y, vx, vy
-        float px = getPosition().getX();
-        float py = getPosition().getY();
-        float vx = getVelocity().getX();
-        float vy = getVelocity().getY();
-        memcpy(buffer + offset, &px, sizeof(float)); offset += sizeof(float);
-        memcpy(buffer + offset, &py, sizeof(float)); offset += sizeof(float);
-        memcpy(buffer + offset, &vx, sizeof(float)); offset += sizeof(float);
-        memcpy(buffer + offset, &vy, sizeof(float)); offset += sizeof(float);
-
-        // Write the name, padded or truncated to 20 bytes
-        char nameBuf[NAME_LEN] = {0};
-        strncpy(nameBuf, getType().c_str(), NAME_LEN-1);
-        memcpy(buffer + offset, nameBuf, NAME_LEN);
-
-        LM.writeLog("Fruit:sending");
-        // Broadcast to all clients
-        int bytes_sent = NM.send(buffer, MSG_SIZE, 0);
-        if (bytes_sent < 0) {
-    LM.writeLog("ERROR: Server failed to send message! Return value: %d", bytes_sent);
-} else {
-    LM.writeLog("Server successfully sent %d bytes.", bytes_sent);
-}
+    // Find the Server object to get the connected client's socket
+    df::ObjectList servers = WM.objectsOfType("Server");
+    if (servers.getCount() > 0) {
+        Server *p_server = dynamic_cast<Server*>(servers[0]);
+        // Only send if we actually have a connected client
+        if (p_server && p_server->m_client_socket != -1) {
+             int bytes = NM.send(&msg, msg.msg_size, p_server->m_client_socket);
+             LM.writeLog("Server sent %d bytes for fruit spawn", bytes);
+        }
     }
+  }
 }

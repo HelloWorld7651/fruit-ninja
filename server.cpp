@@ -19,6 +19,7 @@
 
 Server::Server() {
   setType("Server");
+  m_client_socket = -1; // Initialize the socket to invalid
   NM.setServer(true);
   NM.setMaxConnections(1);
   registerInterest(df::NETWORK_EVENT);
@@ -30,16 +31,13 @@ int Server::eventHandler(const df::Event *p_e) {
     const df::EventNetwork *p_ne = (const df::EventNetwork *) p_e;
 
     if (p_ne->getLabel() == df::NetworkEventLabel::ACCEPT) {
-      LM.writeLog("Server: Accepted connection!");
-      SwordPosMsg out;
-      out.msg_size = sizeof(SwordPosMsg);
-      out.type     = MessageType::SWORD_POS;
-      out.x        = 0.0f;
-      out.y        = 0.0f;
-      NM.send(&out, out.msg_size);
+      // Save the socket index when the client connects!
+      m_client_socket = p_ne->getSocket(); 
+      LM.writeLog("Server: Accepted connection on socket %d!", m_client_socket);
       return 1;
     }
     else if (p_ne->getLabel() == df::NetworkEventLabel::CLOSE) {
+      m_client_socket = -1; // Client disconnected
       GM.setGameOver();
       return 1;
     }
@@ -56,9 +54,6 @@ int Server::handleData(const df::EventNetwork *p_en) {
   // Read just the base header to figure out what type of message this is safely
   const BaseMsg *p_base = (const BaseMsg *)p_en->getMessage();
 
-  // Identify which client sent this (needed for supporting multiple swords later)
-  int socket_index = p_en->getSocket();
-
   // Handle incoming mouse position from client
   if (p_base->type == MessageType::MOUSE_POS) {
     const MousePosMsg *p_msg = (const MousePosMsg *)p_en->getMessage();
@@ -70,20 +65,18 @@ int Server::handleData(const df::EventNetwork *p_en) {
       swords[0]->setPosition(pos);
     }
     
-    // Broadcast updated sword position back to all clients
+    // Broadcast updated sword position back to the client
     SwordPosMsg out;
     out.msg_size = sizeof(SwordPosMsg);
     out.type = MessageType::SWORD_POS;
     out.x = pos.getX();
     out.y = pos.getY();
     
-    NM.send(&out, out.msg_size);
-    int bytes_sent = NM.send(&out, out.msg_size);
-        if (bytes_sent < 0) {
-    LM.writeLog("ERROR: Server failed to send message! Return value: %d", bytes_sent);
-} else {
-    LM.writeLog("Server successfully sent %d bytes.", bytes_sent);
-}
+    // Send it back out using the known client socket (3 arguments!)
+    if (m_client_socket != -1) {
+      NM.send(&out, out.msg_size, m_client_socket);
     }
-    return 1;
+  }
+
+  return 1;
 }
