@@ -31,6 +31,12 @@ int Server::eventHandler(const df::Event *p_e) {
 
     if (p_ne->getLabel() == df::NetworkEventLabel::ACCEPT) {
       LM.writeLog("Server: Accepted connection!");
+      SwordPosMsg out;
+      out.msg_size = sizeof(SwordPosMsg);
+      out.type     = MessageType::SWORD_POS;
+      out.x        = 0.0f;
+      out.y        = 0.0f;
+      NM.send(&out, out.msg_size);
       return 1;
     }
     else if (p_ne->getLabel() == df::NetworkEventLabel::CLOSE) {
@@ -72,7 +78,12 @@ int Server::handleData(const df::EventNetwork *p_en) {
     out.y = pos.getY();
     
     NM.send(&out, out.msg_size);
-  }
-
-  return 1;
+    int bytes_sent = NM.send(&out, out.msg_size);
+        if (bytes_sent < 0) {
+    LM.writeLog("ERROR: Server failed to send message! Return value: %d", bytes_sent);
+} else {
+    LM.writeLog("Server successfully sent %d bytes.", bytes_sent);
+}
+    }
+    return 1;
 }

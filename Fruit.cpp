@@ -196,6 +196,11 @@ void Fruit::start(float speed) {
 
         LM.writeLog("Fruit:sending");
         // Broadcast to all clients
-        NM.send(buffer, MSG_SIZE);
+        int bytes_sent = NM.send(buffer, MSG_SIZE);
+        if (bytes_sent < 0) {
+    LM.writeLog("ERROR: Server failed to send message! Return value: %d", bytes_sent);
+} else {
+    LM.writeLog("Server successfully sent %d bytes.", bytes_sent);
+}
     }
 }
