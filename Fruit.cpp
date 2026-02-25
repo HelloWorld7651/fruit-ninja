@@ -158,39 +158,44 @@ void Fruit::start(float speed) {
   setSpeed(speed);
 
   //if server send message
-  if (NM.isServer()) {
-  // Compute message size manually: int + enum + 4 floats + 20‑byte name
-  const int msgSize = sizeof(int) + sizeof(MessageType)
-                      + sizeof(float)*4 + 20;
-  char buffer[msgSize];
-  int offset = 0;
+  // Only the authoritative server sends spawn messages.
+    if (NM.isServer()) {
+        // Define a fixed-size buffer:
+        //  4 bytes for total length (int)
+        //  4 bytes for message type (int)
+        //  4 floats for x, y, vx, vy (16 bytes)
+        //  20 bytes for the fruit name (padded/truncated)
+        const int NAME_LEN = 20;
+        const int MSG_SIZE = sizeof(int) + sizeof(int) + sizeof(float)*4 + NAME_LEN;
+        char buffer[MSG_SIZE];
+        int offset = 0;
 
-  // Copy total length and type
-  memcpy(buffer + offset, &msgSize, sizeof(int));
-  offset += sizeof(int);
-  MessageType type = MessageType::FRUIT_SPAWN;
-  memcpy(buffer + offset, &type, sizeof(MessageType));
-  offset += sizeof(MessageType);
+        // Write total length
+        memcpy(buffer + offset, &MSG_SIZE, sizeof(int));
+        offset += sizeof(int);
 
-  // Copy position and velocity
-  float px = getPosition().getX();
-  float py = getPosition().getY();
-  float vx = getVelocity().getX();
-  float vy = getVelocity().getY();
-  memcpy(buffer + offset, &px, sizeof(float));
-  offset += sizeof(float);
-  memcpy(buffer + offset, &py, sizeof(float));
-  offset += sizeof(float);
-  memcpy(buffer + offset, &vx, sizeof(float));
-  offset += sizeof(float);
-  memcpy(buffer + offset, &vy, sizeof(float));
-  offset += sizeof(float);
+        // Write message type as an int (3 for FRUIT_SPAWN, or cast MessageType)
+        int typeVal = static_cast<int>(MessageType::FRUIT_SPAWN);
+        memcpy(buffer + offset, &typeVal, sizeof(int));
+        offset += sizeof(int);
 
-  // Copy the name into fixed‑length space
-  char name[20] = {0};
-  strncpy(name, getType().c_str(), 19);
-  memcpy(buffer + offset, name, 20);
-  LM.writeLog("Recieved Client");
-  NM.send(buffer, msgSize);
-}
+        // Write x, y, vx, vy
+        float px = getPosition().getX();
+        float py = getPosition().getY();
+        float vx = getVelocity().getX();
+        float vy = getVelocity().getY();
+        memcpy(buffer + offset, &px, sizeof(float)); offset += sizeof(float);
+        memcpy(buffer + offset, &py, sizeof(float)); offset += sizeof(float);
+        memcpy(buffer + offset, &vx, sizeof(float)); offset += sizeof(float);
+        memcpy(buffer + offset, &vy, sizeof(float)); offset += sizeof(float);
+
+        // Write the name, padded or truncated to 20 bytes
+        char nameBuf[NAME_LEN] = {0};
+        strncpy(nameBuf, getType().c_str(), NAME_LEN-1);
+        memcpy(buffer + offset, nameBuf, NAME_LEN);
+
+        LM.writeLog("Fruit:sending");
+        // Broadcast to all clients
+        NM.send(buffer, MSG_SIZE);
+    }
 }
