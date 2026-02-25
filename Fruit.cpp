@@ -159,7 +159,7 @@ void Fruit::start(float speed) {
 
   //if server send message
   // Only the authoritative server sends spawn messages.
-    if (NM.isServer()) {
+    if (NM.isServer() && NM.getNumConnections()>0) {
         // Define a fixed-size buffer:
         //  4 bytes for total length (int)
         //  4 bytes for message type (int)
@@ -196,7 +196,7 @@ void Fruit::start(float speed) {
 
         LM.writeLog("Fruit:sending");
         // Broadcast to all clients
-        int bytes_sent = NM.send(buffer, MSG_SIZE);
+        int bytes_sent = NM.send(buffer, MSG_SIZE, 0);
         if (bytes_sent < 0) {
     LM.writeLog("ERROR: Server failed to send message! Return value: %d", bytes_sent);
 } else {
