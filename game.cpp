@@ -46,6 +46,8 @@ int main(int argc, char *argv[]) {
     return 0;
   }
 
+loadResources();
+
  if (is_server) {
     new Server;
     new Sword; 

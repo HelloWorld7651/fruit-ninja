@@ -21,7 +21,7 @@ Client::Client(std::string server_name) {
   NM.setServer(false);
   m_connected = false; 
 
-  // Register for Network and Step events (no more mouse event spam!)
+  // Register for Network and Step events
   registerInterest(df::NETWORK_EVENT);
   registerInterest(df::STEP_EVENT);
 
@@ -32,6 +32,7 @@ Client::Client(std::string server_name) {
     exit(-1);
   }
 }
+
 int Client::eventHandler(const df::Event *p_e) {
 
   // Send the sword position once per frame
@@ -51,12 +52,11 @@ int Client::eventHandler(const df::Event *p_e) {
 
       // Clean, structured data packing
       SwordPosMsg msg;
-      msg.msg_size = sizeof(SwordPosMsg); // Engine needs to know total size
+      msg.msg_size = sizeof(SwordPosMsg); 
       msg.type = MessageType::SWORD_POS;
       msg.x = pos.getX();
       msg.y = pos.getY();
 
-      // Send the struct directly
       NM.send(&msg, msg.msg_size); 
     }
     return 0; 
@@ -71,41 +71,44 @@ int Client::eventHandler(const df::Event *p_e) {
       LM.writeLog("Client: Connected! Now ready to send data.");
       return 1;
     }
-    if (p_ne->getLabel() == df::NetworkEventLabel::CLOSE) {
+    else if (p_ne->getLabel() == df::NetworkEventLabel::CLOSE) {
       GM.setGameOver();
       return 1;
     }
-    if (p_ne->getLabel() == df::NetworkEventLabel::DATA) {
+    else {
+      // THIS IS THE CRUCIAL FIX: If it's not a CONNECT or CLOSE, it is incoming data!
       return handleData(p_ne);
     }
   }
 
   return Object::eventHandler(p_e);
 }
+
 int Client::handleData(const df::EventNetwork *p_en) {
   // We can safely read the 'type' by checking the generic struct first
-  const SwordPosMsg *p_msg = (const SwordPosMsg *) p_en->getMessage();
+  const BaseMsg *p_base = (const BaseMsg *) p_en->getMessage();
 
-  if (p_msg->type == MessageType::SWORD_POS) {
+  if (p_base->type == MessageType::SWORD_POS) {
+    const SwordPosMsg *p_msg = (const SwordPosMsg *) p_en->getMessage();
     df::Vector pos(p_msg->x, p_msg->y);
     df::ObjectList swords = WM.objectsOfType(SWORD_STRING);
     if (swords.getCount() > 0) {
       swords[0]->setPosition(pos);
     }
   }
-  else if (p_msg->type == MessageType::FRUIT_SPAWN) {
+  else if (p_base->type == MessageType::FRUIT_SPAWN) {
     // Cast it to the Fruit message
     const FruitSpawnMsg *f_msg = (const FruitSpawnMsg *) p_en->getMessage();
     
-    // Create a new Fruit on the client side
-    Fruit *p_f = new Fruit();
+    // Pass the name from the server into the constructor
+    Fruit *p_f = new Fruit(std::string(f_msg->fruit_name));
     
     // Override its position and velocity to match the Server exactly
     p_f->setPosition(df::Vector(f_msg->x, f_msg->y));
     p_f->setVelocity(df::Vector(f_msg->vx, f_msg->vy));
     
-    LM.writeLog("Client: Received FRUIT_SPAWN! Created fruit at %f, %f", f_msg->x, f_msg->y);
+    LM.writeLog("Client: Received FRUIT_SPAWN! Created %s at %f, %f", f_msg->fruit_name, f_msg->x, f_msg->y);
   }
 
   return 1;
-}
+} 
